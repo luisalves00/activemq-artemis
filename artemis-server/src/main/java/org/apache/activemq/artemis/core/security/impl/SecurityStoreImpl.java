@@ -303,19 +303,23 @@ public class SecurityStoreImpl implements SecurityStore, HierarchicalRepositoryC
             AuditLogger.securityFailure(ex);
             throw ex;
          }
+         updateAuthorizationCache(checkType, bareAddress, user, fqqn);
 
-         // if we get here we're granted, add to the cache
-         ConcurrentHashSet<SimpleString> set;
-         String key = createAuthorizationCacheKey(user, checkType);
-         ConcurrentHashSet<SimpleString> act = authorizationCache.getIfPresent(key);
-         if (act != null) {
-            set = act;
-         } else {
-            set = new ConcurrentHashSet<>();
-            authorizationCache.put(key, set);
-         }
-         set.add(isFullyQualified ? fqqn : bareAddress);
       }
+   }
+
+   void updateAuthorizationCache(CheckType checkType, SimpleString bareAddress, String user, SimpleString fqqn) {
+      // if we get here we're granted, add to the cache
+      ConcurrentHashSet<SimpleString> set;
+      String key = createAuthorizationCacheKey(user, checkType);
+      ConcurrentHashSet<SimpleString> act = authorizationCache.getIfPresent(key);
+      if (act != null) {
+         set = act;
+      } else {
+         set = new ConcurrentHashSet<>();
+         authorizationCache.put(key, set);
+      }
+      set.add(fqqn != null ? fqqn : bareAddress);
    }
 
    @Override
@@ -376,7 +380,7 @@ public class SecurityStoreImpl implements SecurityStore, HierarchicalRepositoryC
       return authorizationCache.size();
    }
 
-   private boolean checkAuthorizationCache(final SimpleString dest, final String user, final CheckType checkType) {
+   boolean checkAuthorizationCache(final SimpleString dest, final String user, final CheckType checkType) {
       boolean granted = false;
 
       ConcurrentHashSet<SimpleString> act = authorizationCache.getIfPresent(createAuthorizationCacheKey(user, checkType));
